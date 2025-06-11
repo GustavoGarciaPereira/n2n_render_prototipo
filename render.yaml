@@ -3,28 +3,32 @@
 services:
   # Serviço principal do n8n
   - name: n8n
-    type: web         # É um serviço web, acessível pela internet
-    env: docker       # Vamos usar a imagem Docker oficial do n8n
-    plan: starter     # 'starter' é elegível para o plano gratuito. Mude para um plano pago para produção.
+    type: web
+    env: docker
+    plan: starter # Para uso real, considere um plano pago para evitar hibernação.
     
     # Define um disco persistente para salvar seus workflows e credenciais
-    # Isso é CRUCIAL! Sem isso, você perde tudo a cada deploy.
     disk:
       name: n8n-data
-      mountPath: /home/node/.n8n # O diretório onde o n8n salva os dados
-      sizeGB: 1       # 1 GB é suficiente para começar
-
+      mountPath: /home/node/.n8n
+      sizeGB: 1
+      
     # Verificação de saúde para o Render saber se o n8n está funcionando
     healthCheck:
       path: /healthz
       
     # Variáveis de ambiente para configurar o n8n
     envVars:
-      # Render vai fornecer a URL automaticamente para esta variável
       - key: WEBHOOK_URL
-        value: ${RENDER_EXTERNAL_URL}
+        fromService:
+          type: web
+          name: n8n
+          property: url
       - key: N8N_HOST
-        value: ${RENDER_EXTERNAL_URL_WITHOUT_SCHEME}
+        fromService:
+          type: web
+          name: n8n
+          property: host
 
       # Fuso horário para agendamentos (triggers) funcionarem corretamente
       - key: TZ
@@ -36,10 +40,10 @@ services:
         value: postgresdb
 
       # As variáveis abaixo pegam os dados de conexão diretamente do
-      # serviço de banco de dados que definimos mais abaixo. É mágico!
+      # serviço de banco de dados que definimos abaixo.
       - key: DB_POSTGRESDB_HOST
         fromDatabase:
-          name: n8n-db # O nome do nosso serviço de DB
+          name: n8n-db
           property: host
       - key: DB_POSTGRESDB_DATABASE
         fromDatabase:
@@ -54,9 +58,9 @@ services:
           name: n8n-db
           property: password
 
-# Serviço de Banco de Dados PostgreSQL Gerenciado
+# A chave 'databases' deve começar no início da linha, sem indentação.
 databases:
   - name: n8n-db
-    plan: free        # O plano gratuito de DB é ótimo para começar
-    databaseName: n8n # O nome do banco de dados
-    user: n8n         # O nome do usuário
+    plan: free
+    databaseName: n8n
+    user: n8n
